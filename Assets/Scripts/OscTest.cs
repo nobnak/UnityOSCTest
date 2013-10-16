@@ -20,7 +20,7 @@ public class OscTest : MonoBehaviour {
 	}
 
 	static void Test02 () {
-		var enc = new Encoder("screen/position");
+		var enc = new Encoder("/screen/position");
 		enc.Add(0);
 		enc.Add(1.1f);
 		enc.Add(2.2f);
