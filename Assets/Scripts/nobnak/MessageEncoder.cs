@@ -5,16 +5,16 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace nobnak.OSC {	
+namespace nobnak.OSC {
 	public class MessageEncoder {
 		private string _address;
 		private LinkedList<IParam> _params;
-		
+
 		public MessageEncoder(string address) {
 			_address = address;
 			_params = new LinkedList<IParam>();
 		}
-		
+
 		public void Add(int content) {
 			_params.AddLast(new Int32Param(content));
 		}
@@ -24,35 +24,38 @@ namespace nobnak.OSC {
 		public void Add(string content) {
 			_params.AddLast(new StringParam(content));
 		}
-		
+		public void Add(byte[] content, int offset, int length) {
+			_params.AddLast(new BlobParam(content, offset, length));
+		}
+
 		public byte[] Encode() {
 			var lenAddress = (_address.Length + 4) & ~3;
 			var lenTags = (_params.Count + 5) & ~3;
 			var lenDatas = _params.Sum((p) => p.Length);
 			var bytedata = new byte[lenAddress + lenTags + lenDatas];
-			
+
 			var offset = 0;
 			Encoding.UTF8.GetBytes(_address, 0, _address.Length, bytedata, offset);
 			offset += lenAddress;
-			
+
 			bytedata[offset] = (byte)',';
 			var addOffset = 0;
 			foreach (var p in _params)
 				bytedata[offset + ++addOffset] = p.Tag;
 			offset += lenTags;
-			
+
 			foreach (var p in _params) {
 				p.Assign(bytedata, offset);
 				offset += p.Length;
 			}
-			
+
 			return bytedata;
 		}
-		
+
 		public static byte[] ReverseBytes(byte[] inArray) {
 			byte temp;
 			int highCtr = inArray.Length - 1;
-			
+
 			for (int ctr = 0; ctr < inArray.Length / 2; ctr++) {
 				temp = inArray[ctr];
 				inArray[ctr] = inArray[highCtr];
@@ -61,74 +64,44 @@ namespace nobnak.OSC {
 			}
 			return inArray;
 		}
-		
+
 		public interface IParam {
 			byte Tag { get; }
 			int Length { get; }
 			void Assign(byte[] output, int offset);
 		}
-		[StructLayout(LayoutKind.Explicit)]
 		public class Int32Param : IParam {
-			[FieldOffset(0)]
-			private int _intdata;
-			[FieldOffset(0)]
-            public byte Byte0;
-            [FieldOffset(1)]
-            public byte Byte1;            
-            [FieldOffset(2)]
-            public byte Byte2;
-            [FieldOffset(3)]
-            public byte Byte3;
-			
+			private Union32 _union;
+
 			public Int32Param(int intdata) {
-				_intdata = intdata;
+				_union = new Union32(){ intdata = intdata };
 			}
 			#region IParam implementation
 			public byte Tag { get { return (byte)'i'; } }
 			public int Length { get { return 4; } }
 			public void Assign(byte[] output, int offset) {
-				var inc = BitConverter.IsLittleEndian ? -1 : 1;
-				var accum = BitConverter.IsLittleEndian ? 3 : 0;
-				output[offset + accum] = Byte0; accum += inc;
-				output[offset + accum] = Byte1; accum += inc;
-				output[offset + accum] = Byte2; accum += inc;
-				output[offset + accum] = Byte3; accum += inc;
+				_union.Assign(output, offset);
 			}
 			#endregion
 		}
-		[StructLayout(LayoutKind.Explicit)]
 		public class Float32Param : IParam {
-			[FieldOffset(0)]
-			private float _floatdata;
-			[FieldOffset(0)]
-            public byte Byte0;
-            [FieldOffset(1)]
-            public byte Byte1;            
-            [FieldOffset(2)]
-            public byte Byte2;
-            [FieldOffset(3)]
-            public byte Byte3;
-			
+			private Union32 _union;
+
 			public Float32Param(float floatdata) {
-				_floatdata = floatdata;
+				_union = new Union32(){ floatdata = floatdata };
 			}
 
 			#region IParam implementation
 			public byte Tag { get { return (byte)'f'; } }
 			public int Length { get { return 4; } }
 			public void Assign(byte[] output, int offset) {
-				var inc = BitConverter.IsLittleEndian ? -1 : 1;
-				var accum = BitConverter.IsLittleEndian ? 3 : 0;
-				output[offset + accum] = Byte0; accum += inc;
-				output[offset + accum] = Byte1; accum += inc;
-				output[offset + accum] = Byte2; accum += inc;
-				output[offset + accum] = Byte3; accum += inc;
+				_union.Assign(output, offset);
 			}
 			#endregion
 		}
 		public class StringParam : IParam {
 			private string _stringdata;
-			
+
 			public StringParam(string stringdata) {
 				_stringdata = stringdata;
 			}
@@ -140,6 +113,51 @@ namespace nobnak.OSC {
 				Encoding.UTF8.GetBytes(_stringdata, 0, _stringdata.Length, output, offset);
 			}
 			#endregion
+		}
+		public class BlobParam : IParam {
+			private byte[] _bytedata;
+			private int _offset;
+			private Union32 _length;
+
+			public BlobParam(byte[] bytedata, int offset, int length) {
+				_bytedata = bytedata;
+				_offset = offset;
+				_length = new Union32(){ intdata = length };
+			}
+
+			#region IParam implementation
+			public byte Tag { get { return (byte)'b'; } }
+			public int Length { get { return (_length.intdata + 7) & ~3; } }
+			public void Assign (byte[] output, int outputOffset) {
+				_length.Assign(output, outputOffset); outputOffset += 4;
+				Buffer.BlockCopy(_bytedata, _offset, output, outputOffset, _length.intdata);
+			}
+			#endregion
+		}
+
+		[StructLayout(LayoutKind.Explicit)]
+		public struct Union32 {
+			[FieldOffset(0)]
+			public int intdata;
+			[FieldOffset(0)]
+			public float floatdata;
+			[FieldOffset(0)]
+            public byte Byte0;
+            [FieldOffset(1)]
+            public byte Byte1;
+            [FieldOffset(2)]
+            public byte Byte2;
+            [FieldOffset(3)]
+            public byte Byte3;
+
+			public void Assign(byte[] output, int offset) {
+				var inc = BitConverter.IsLittleEndian ? -1 : 1;
+				var accum = BitConverter.IsLittleEndian ? 3 : 0;
+				output[offset + accum] = Byte0; accum += inc;
+				output[offset + accum] = Byte1; accum += inc;
+				output[offset + accum] = Byte2; accum += inc;
+				output[offset + accum] = Byte3; accum += inc;
+			}
 		}
 	}
 }
