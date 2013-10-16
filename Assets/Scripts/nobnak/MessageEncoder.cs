@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Net;
-using System.Linq;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -31,7 +30,9 @@ namespace nobnak.OSC {
 		public byte[] Encode() {
 			var lenAddress = (_address.Length + 4) & ~3;
 			var lenTags = (_params.Count + 5) & ~3;
-			var lenDatas = _params.Sum((p) => p.Length);
+			var lenDatas = 0;
+			foreach (var p in _params)
+				lenDatas += p.Length;
 			var bytedata = new byte[lenAddress + lenTags + lenDatas];
 
 			var offset = 0;
