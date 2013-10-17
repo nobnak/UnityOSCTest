@@ -23,8 +23,14 @@ namespace nobnak.OSC {
 		public void Add(string content) {
 			_params.AddLast(new StringParam(content));
 		}
+		public void Add(byte[] content) {
+			_params.AddLast(new BlobParam(content, 0, content.Length));
+		}		
 		public void Add(byte[] content, int offset, int length) {
 			_params.AddLast(new BlobParam(content, offset, length));
+		}
+		public void Add(int seconds, int fraction) {
+			_params.AddLast(new TimeParam(seconds, fraction));
 		}
 
 		public byte[] Encode() {
@@ -135,6 +141,25 @@ namespace nobnak.OSC {
 			}
 			#endregion
 		}
+		public class TimeParam : IParam {
+			private Union32 _seconds;
+			private Union32 _frac;
+			
+			public TimeParam(int seconds, int frac) {
+				_seconds = new Union32(){ intdata = seconds };
+				_frac = new Union32(){ intdata = frac };
+			}
+			
+			#region IParam implementation
+			public byte Tag { get { return (byte)'t'; } }
+			public int Length { get { return 8; } }
+			public void Assign(byte[] output, int offset) {
+				_seconds.Assign(output, offset);
+				_frac.Assign(output, offset + 4);
+			}
+
+			#endregion
+		}
 
 		[StructLayout(LayoutKind.Explicit)]
 		public struct Union32 {
@@ -158,6 +183,40 @@ namespace nobnak.OSC {
 				output[offset + accum] = Byte1; accum += inc;
 				output[offset + accum] = Byte2; accum += inc;
 				output[offset + accum] = Byte3; accum += inc;
+			}
+		}
+		[StructLayout(LayoutKind.Explicit)]
+		public struct Union64 {
+			[FieldOffset(0)]
+			public long intdata;
+			[FieldOffset(0)]
+            public byte Byte0;
+            [FieldOffset(1)]
+            public byte Byte1;
+            [FieldOffset(2)]
+            public byte Byte2;
+            [FieldOffset(3)]
+            public byte Byte3;
+            [FieldOffset(4)]
+            public byte Byte4;
+            [FieldOffset(5)]
+            public byte Byte5;
+            [FieldOffset(6)]
+            public byte Byte6;
+            [FieldOffset(7)]
+            public byte Byte7;
+
+			public void Assign(byte[] output, int offset) {
+				var inc = BitConverter.IsLittleEndian ? -1 : 1;
+				var accum = BitConverter.IsLittleEndian ? 7 : 0;
+				output[offset + accum] = Byte0; accum += inc;
+				output[offset + accum] = Byte1; accum += inc;
+				output[offset + accum] = Byte2; accum += inc;
+				output[offset + accum] = Byte3; accum += inc;
+				output[offset + accum] = Byte4; accum += inc;
+				output[offset + accum] = Byte5; accum += inc;
+				output[offset + accum] = Byte6; accum += inc;
+				output[offset + accum] = Byte7; accum += inc;
 			}
 		}
 	}
