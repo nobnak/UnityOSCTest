@@ -83,6 +83,7 @@ GameObject:
   m_Component:
   - 4: {fileID: 449529691}
   - 114: {fileID: 449529692}
+  - 82: {fileID: 449529693}
   m_Layer: 0
   m_Name: Controller
   m_TagString: Untagged
@@ -114,6 +115,63 @@ MonoBehaviour:
   client: {fileID: 709680932}
   text: {fileID: 1192974675}
   clock: {fileID: 943945084}
+  beat: {fileID: 449529693}
+--- !u!82 &449529693
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 449529690}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_audioClip: {fileID: 8300000, guid: 7faded0c7bf234dd8bd1b1e9b6129c5a, type: 3}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 1
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+    - time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
 --- !u!1 &709680930
 GameObject:
   m_ObjectHideFlags: 0
@@ -209,14 +267,14 @@ GUIText:
   m_Text: '10/18/2013 06:00:41
 
     Delay 0.000E+000'
-  m_Anchor: 1
+  m_Anchor: 6
   m_Alignment: 0
   m_PixelOffset: {x: 0, y: 0}
   m_LineSpacing: 1
   m_TabSize: 4
   m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
   m_Material: {fileID: 0}
-  m_FontSize: 32
+  m_FontSize: 16
   m_FontStyle: 0
   m_PixelCorrect: 1
   m_RichText: 1
@@ -227,7 +285,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1192974674}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: .5, y: 1, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

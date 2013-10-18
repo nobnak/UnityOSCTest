@@ -7,6 +7,7 @@ public class UtcClock : MonoBehaviour {
 	public OscNtpClient client;
 	public GUIText text;
 	public Transform clock;
+	public AudioSource beat;
 	
 	private bool _synch = true;
 
@@ -30,8 +31,20 @@ public class UtcClock : MonoBehaviour {
 		if (_synch)
 			now = now.AddSeconds(delay);
 		
+		var playPos = now.Millisecond * 1.0e-3f;
+		if (playPos < beat.clip.length)
+			Play(playPos);
+		
 		text.text = string.Format("{0}\nDelay {1:E3}", now, delay);
 		var angle = MILS2ANGLE * now.Millisecond;
 		clock.localRotation = Quaternion.AngleAxis(-angle, Vector3.forward);
+	}
+	
+	void Play(float seek) {
+		if (beat.isPlaying)
+			return;
+		
+		beat.time = seek;
+		beat.Play();
 	}
 }
