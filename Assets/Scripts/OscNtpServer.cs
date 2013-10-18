@@ -48,9 +48,9 @@ public class OscNtpServer : MonoBehaviour {
 			return;
 		
 		try {
-			Debug.Log("Request received");
 			var remoteEndpoint = new IPEndPoint(0, 0);
 			byte[] receivedData = _udp.EndReceive(ar, ref remoteEndpoint);
+			//Debug.Log("Received : " + remoteEndpoint.ToString());
 			_oscParser.FeedData(receivedData);
 			while (_oscParser.MessageCount > 0) {
 				var m = _oscParser.PopMessage();
