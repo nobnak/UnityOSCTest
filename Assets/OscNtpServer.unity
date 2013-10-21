@@ -160,7 +160,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7c0231700c6d849159c9ed1697f802b5, type: 3}
   m_Name: 
-  remoteHost: 10.2.0.197
+  remoteHost: localhost
   remotePort: 10000
   interval: 1
   nSamplesPOT: 64

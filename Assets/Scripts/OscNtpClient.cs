@@ -4,79 +4,56 @@ using System.Net.Sockets;
 using System.Net;
 
 public class OscNtpClient : MonoBehaviour {
-	public const string NTP_REQUEST = "/ntp/request";
-	public const string NTP_RESPONSE = "/ntp/response";
-	
 	public string remoteHost = "localhost";
 	public int remotePort = 10000;
 	public float interval = 1f;
 	public int nSamplesPOT = 64;
 	public RingBuffer<NtpStat> stats;
 	
-	private UdpClient _udp;
-	private IPEndPoint _remoteEndpoint;
-	private System.AsyncCallback _callback;
-	private keijiro.Osc.Parser _oscParser;
+	private nobnak.OSC.OscClient _client;
 
 	// Use this for initialization
 	void Start () {
 		stats = new RingBuffer<NtpStat>(nSamplesPOT);
-		_oscParser = new keijiro.Osc.Parser();
 		var address = Dns.GetHostAddresses(remoteHost)[0];
-		_remoteEndpoint = new IPEndPoint(address, remotePort);
-		_udp = new UdpClient();
-		_callback = new System.AsyncCallback(HandleReceived);
-		_udp.BeginReceive(_callback, null);			
+		var serverEndpoint = new IPEndPoint(address, remotePort);
+		_client = new nobnak.OSC.OscClient(serverEndpoint);
+		_client.OnReceive += HandleReceived;;
+		_client.OnError += delegate(System.Exception obj) {
+			Debug.Log(obj);
+		};
 		
 		StartCoroutine("Request");
 	}
 	
-	void HandleReceived(System.IAsyncResult ar) {
-		try {
-			if (_udp == null)
-				return;
-			var remoteEndpoint = new IPEndPoint(0, 0);
-			byte[] receivedData = _udp.EndReceive(ar, ref remoteEndpoint);
-			_oscParser.FeedData(receivedData);
-			while (_oscParser.MessageCount > 0) {
-				var m = _oscParser.PopMessage();
-				if (m.path != NTP_RESPONSE)
-					continue;
-				
-				var t3 = HighResTime.UtcNow;
-				var t0 = System.DateTime.FromBinary(IPAddress.NetworkToHostOrder(System.BitConverter.ToInt64((byte[])m.data[0], 0)));
-				var t1 = System.DateTime.FromBinary(IPAddress.NetworkToHostOrder(System.BitConverter.ToInt64((byte[])m.data[1], 0)));
-				var t2 = System.DateTime.FromBinary(IPAddress.NetworkToHostOrder(System.BitConverter.ToInt64((byte[])m.data[2], 0)));
-				var roundtrip = NtpUtil.Roundtrip(t0, t1, t2, t3);
-				var delay = NtpUtil.Delay(t0, t1, t2, t3);
-				stats.Add(new NtpStat() { delay = delay, roundtrip = roundtrip });
-				//Debug.Log(string.Format("NTP average delay={0:E}sec", AverageDelay()));
-			}
-		} catch (System.Exception e) {
-			Debug.Log(e);
-		}
-		_udp.BeginReceive(_callback, null);
+	void HandleReceived(keijiro.Osc.Message m) {
+		if (m.path != OscNtpServer.NTP_RESPONSE)
+			return;
+			
+		var t3 = HighResTime.UtcNow;
+		var t0 = System.DateTime.FromBinary(IPAddress.NetworkToHostOrder(System.BitConverter.ToInt64((byte[])m.data[0], 0)));
+		var t1 = System.DateTime.FromBinary(IPAddress.NetworkToHostOrder(System.BitConverter.ToInt64((byte[])m.data[1], 0)));
+		var t2 = System.DateTime.FromBinary(IPAddress.NetworkToHostOrder(System.BitConverter.ToInt64((byte[])m.data[2], 0)));
+		var roundtrip = NtpUtil.Roundtrip(t0, t1, t2, t3);
+		var delay = NtpUtil.Delay(t0, t1, t2, t3);
+		stats.Add(new NtpStat() { delay = delay, roundtrip = roundtrip });
 	}
 	
 	IEnumerator Request() {
 		while (true) {
 			yield return new WaitForSeconds(interval);
-			try {
-				var oscEnc = new nobnak.OSC.MessageEncoder(NTP_REQUEST);
-				var t0 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(HighResTime.UtcNow.ToBinary()));
-				oscEnc.Add(t0);
-				var bytedata = oscEnc.Encode();
-				_udp.Send(bytedata, bytedata.Length, _remoteEndpoint);
-			} catch (System.Exception e) {
-				Debug.Log(e);
-			}
+			var oscEnc = new nobnak.OSC.MessageEncoder(OscNtpServer.NTP_REQUEST);
+			var t0 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(HighResTime.UtcNow.ToBinary()));
+			oscEnc.Add(t0);
+			var bytedata = oscEnc.Encode();
+			_client.Send(bytedata);
 		}
 	}
 	
 	void OnDestroy() {
-		if (_udp != null) {
-			_udp.Close();
-			_udp = null;
+		if (_client != null) {
+			_client.Dispose();
+			_client = null;
 		}
 	}
 	

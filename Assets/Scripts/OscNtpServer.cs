@@ -4,23 +4,23 @@ using System.Net;
 using System.Collections.Generic;
 
 public class OscNtpServer : MonoBehaviour {
+	public const string NTP_REQUEST = "/ntp/request";
+	public const string NTP_RESPONSE = "/ntp/response";	
+	
 	public int listenPort;
 	
-	private UdpClient _udp;
-	private System.AsyncCallback _callback;
-	private keijiro.Osc.Parser _oscParser;
-	private IPEndPoint _endpoint;
+	private nobnak.OSC.OscServer _server;
 	private Queue<NtpRequest> _requests;
 
 	// Use this for initialization
 	void Start () {
 		_requests = new Queue<NtpRequest>();
-		_endpoint = new IPEndPoint(IPAddress.Any, listenPort);
-		_udp = new UdpClient(_endpoint);
-		_callback = new System.AsyncCallback(HandleReceive);
-		_oscParser = new keijiro.Osc.Parser();
-		
-		_udp.BeginReceive(_callback, null);			
+		var serverEndpoint = new IPEndPoint(IPAddress.Any, listenPort);
+		_server = new nobnak.OSC.OscServer(serverEndpoint);
+		_server.OnReceive += HandleReceived;
+		_server.OnError += delegate(System.Exception obj) {
+			Debug.Log(obj);
+		};	
 	}
 	
 	// Update is called once per frame
@@ -29,13 +29,13 @@ public class OscNtpServer : MonoBehaviour {
 			lock (_requests) {
 				while (_requests.Count > 0) {
 					var req = _requests.Dequeue();
-					var oscEnc = new nobnak.OSC.MessageEncoder("/ntp/response");
+					var oscEnc = new nobnak.OSC.MessageEncoder(NTP_RESPONSE);
 					oscEnc.Add(req.t0);
 					oscEnc.Add(req.t1);
 					var t2 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(HighResTime.UtcNow.ToBinary()));
 					oscEnc.Add(t2);
 					var bytedata = oscEnc.Encode();
-					_udp.Send(bytedata, bytedata.Length, req.remote);
+					_server.Send(bytedata, req.remote);
 				}
 			}
 		} catch (System.Exception e) {
@@ -43,38 +43,23 @@ public class OscNtpServer : MonoBehaviour {
 		}
 	}
 		
-	void HandleReceive(System.IAsyncResult ar) {
-		if (_udp == null)
+	void HandleReceived(keijiro.Osc.Message m, IPEndPoint remoteEndpoint) {
+		if (m.path != NTP_REQUEST)
 			return;
 		
-		try {
-			var remoteEndpoint = new IPEndPoint(0, 0);
-			byte[] receivedData = _udp.EndReceive(ar, ref remoteEndpoint);
-			//Debug.Log("Received : " + remoteEndpoint.ToString());
-			_oscParser.FeedData(receivedData);
-			while (_oscParser.MessageCount > 0) {
-				var m = _oscParser.PopMessage();
-				if (m.path != "/ntp/request")
-					continue;
-				
-				lock (_requests) {
-					_requests.Enqueue(new NtpRequest() {
-						remote = remoteEndpoint,
-						t0 = (byte[])m.data[0],
-						t1 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(HighResTime.UtcNow.ToBinary())),
-					});
-				}
-			}
-		} catch (System.Exception e) {
-			Debug.Log(e);
+		lock (_requests) {
+			_requests.Enqueue(new NtpRequest() {
+				remote = remoteEndpoint,
+				t0 = (byte[])m.data[0],
+				t1 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(HighResTime.UtcNow.ToBinary())),
+			});
 		}
-		_udp.BeginReceive(_callback, null);
 	}
 	
 	void OnDestroy() {
-		if (_udp != null) {
-			_udp.Close();
-			_udp = null;
+		if (_server != null) {
+			_server.Dispose();
+			_server = null;
 		}
 	}
 	
