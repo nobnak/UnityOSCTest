@@ -7,18 +7,17 @@ namespace nobnak.OSC {
 		public event Action<keijiro.Osc.Message> OnReceive;
 		public event Action<Exception> OnError;
 		
-		private IPEndPoint _serverEndpoint;
 		private UdpClient _udp;
 		private AsyncCallback _callback;
+		private IPEndPoint _serverEndpoint;
 		private keijiro.Osc.Parser _oscParser;
 		private bool _disposed = false;
 		
 		public OscClient(IPEndPoint serverEndpoint) {
 			_serverEndpoint = serverEndpoint;
-			
-			_oscParser = new keijiro.Osc.Parser();
 			_udp = new UdpClient();
-			_callback = new System.AsyncCallback(HandleReceived);
+			_callback = new System.AsyncCallback(HandleReceive);
+			_oscParser = new keijiro.Osc.Parser();
 			
 			_udp.BeginReceive(_callback, null);			
 		}
@@ -32,7 +31,7 @@ namespace nobnak.OSC {
 			}
 		}
 
-		private void HandleReceived(System.IAsyncResult ar) {
+		private void HandleReceive(System.IAsyncResult ar) {
 			try {
 				if (_udp == null)
 					return;

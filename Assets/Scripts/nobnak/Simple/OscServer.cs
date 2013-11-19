@@ -2,7 +2,6 @@ using System.Net.Sockets;
 using System;
 using System.Net;
 
-
 namespace nobnak.OSC {
 	public class OscServer : IDisposable {
 		public event Action<keijiro.Osc.Message, IPEndPoint> OnReceive;
@@ -10,8 +9,8 @@ namespace nobnak.OSC {
 		
 		private UdpClient _udp;
 		private AsyncCallback _callback;
-		private keijiro.Osc.Parser _oscParser;
 		private IPEndPoint _serverEndpoint;
+		private keijiro.Osc.Parser _oscParser;
 		private bool _disposed = false;
 	
 		public OscServer(IPEndPoint serverEndpoint) {

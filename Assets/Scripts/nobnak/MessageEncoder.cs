@@ -87,7 +87,7 @@ namespace nobnak.OSC {
 			public byte Tag { get { return (byte)'i'; } }
 			public int Length { get { return 4; } }
 			public void Assign(byte[] output, int offset) {
-				_union.Assign(output, offset);
+				_union.Pack(output, offset);
 			}
 			#endregion
 		}
@@ -102,7 +102,7 @@ namespace nobnak.OSC {
 			public byte Tag { get { return (byte)'f'; } }
 			public int Length { get { return 4; } }
 			public void Assign(byte[] output, int offset) {
-				_union.Assign(output, offset);
+				_union.Pack(output, offset);
 			}
 			#endregion
 		}
@@ -136,7 +136,7 @@ namespace nobnak.OSC {
 			public byte Tag { get { return (byte)'b'; } }
 			public int Length { get { return (_length.intdata + 7) & ~3; } }
 			public void Assign (byte[] output, int outputOffset) {
-				_length.Assign(output, outputOffset); outputOffset += 4;
+				_length.Pack(output, outputOffset); outputOffset += 4;
 				Buffer.BlockCopy(_bytedata, _offset, output, outputOffset, _length.intdata);
 			}
 			#endregion
@@ -154,8 +154,8 @@ namespace nobnak.OSC {
 			public byte Tag { get { return (byte)'t'; } }
 			public int Length { get { return 8; } }
 			public void Assign(byte[] output, int offset) {
-				_seconds.Assign(output, offset);
-				_frac.Assign(output, offset + 4);
+				_seconds.Pack(output, offset);
+				_frac.Pack(output, offset + 4);
 			}
 
 			#endregion
@@ -176,13 +176,22 @@ namespace nobnak.OSC {
             [FieldOffset(3)]
             public byte Byte3;
 
-			public void Assign(byte[] output, int offset) {
+			public void Pack(byte[] output, int offset) {
 				var inc = BitConverter.IsLittleEndian ? -1 : 1;
 				var accum = BitConverter.IsLittleEndian ? 3 : 0;
 				output[offset + accum] = Byte0; accum += inc;
 				output[offset + accum] = Byte1; accum += inc;
 				output[offset + accum] = Byte2; accum += inc;
 				output[offset + accum] = Byte3; accum += inc;
+			}
+			
+			public void Unpack(byte[] input, int offset) {
+				var inc = BitConverter.IsLittleEndian ? -1 : 1;
+				var accum = BitConverter.IsLittleEndian ? 3 : 0;
+				Byte0 = input[offset + accum]; accum += inc;
+				Byte1 = input[offset + accum]; accum += inc;
+				Byte2 = input[offset + accum]; accum += inc;
+				Byte3 = input[offset + accum]; accum += inc;
 			}
 		}
 		[StructLayout(LayoutKind.Explicit)]
@@ -206,7 +215,7 @@ namespace nobnak.OSC {
             [FieldOffset(7)]
             public byte Byte7;
 
-			public void Assign(byte[] output, int offset) {
+			public void Pack(byte[] output, int offset) {
 				var inc = BitConverter.IsLittleEndian ? -1 : 1;
 				var accum = BitConverter.IsLittleEndian ? 7 : 0;
 				output[offset + accum] = Byte0; accum += inc;
